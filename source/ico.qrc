@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/ico">
+        <file>ico/zoom-out.png</file>
+        <file>ico/zoom-in.png</file>
+        <file>ico/vector.png</file>
+        <file>ico/folder.png</file>
+        <file>ico/disk.png</file>
+        <file>ico/qr.png</file>
+    </qresource>
+</RCC>
