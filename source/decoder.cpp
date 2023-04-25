@@ -134,17 +134,9 @@ int Decoder::defineQRQuadrant(QPoint* blocks)
 
 float Decoder::defineRotationAngle(QPoint* blocks, int quadrant)
 {
-    float anglea = atan2((blocks[0].y() - blocks[1].y()), (blocks[0].x() - blocks[1].x()));
-    float anglec = atan2((blocks[2].y() - blocks[1].y()), (blocks[2].x() - blocks[1].x()));
-    if (anglea < 0)
-    {
-        anglea *= -1;
-    }
-    if (anglec < 0)
-    {
-        anglec *= -1;
-    }
-    cout << anglea << " " << anglec << endl;
+    float anglea = atan2((blocks[0].y() - blocks[1].y()), (blocks[0].x() - blocks[1].x())) * -1;
+    float anglec = atan2((blocks[2].y() - blocks[1].y()), (blocks[2].x() - blocks[1].x())) * -1;
+    cout << anglea << " " << anglec << " " << quadrant << endl;
     return anglec + quadrant * (M_PI / 2);
 }
 
@@ -180,6 +172,7 @@ QPixmap Decoder::qrToMatrix(QPixmap image, QPoint* blocks, int size)
     {
         pixels_per_module++;
     }
+    int border = pixels_per_module * 0.25;
 
     float image_scale_factor = float(pixels_per_module) / (float(size_pixels) / float(size - 1));
     QImage qImage = image.scaled(int(image.width() * image_scale_factor), int(image.height() * image_scale_factor)).toImage();
@@ -202,36 +195,100 @@ QPixmap Decoder::qrToMatrix(QPixmap image, QPoint* blocks, int size)
         for (int module_x = 0; module_x < size; module_x++)
         {
             sumMatrix[module_y][module_x] = 0;
-            for (int pixel_y = 0; pixel_y < pixels_per_module; pixel_y++)
+            int pixels_checked = 0;
+            int i;
+            int left = border;
+            int right = pixels_per_module - border;
+            int top = border;
+            int bottom = pixels_per_module - border;
+
+            while (left <= right && top <= bottom)
             {
-                for (int pixel_x = 0; pixel_x < pixels_per_module; pixel_x++)
+                for (i = left; i <= right; ++i)
                 {
-                    sumMatrix[module_y][module_x] += qGray(qImage.pixel(start_x + module_x * pixels_per_module + pixel_x, start_y + module_y * pixels_per_module + pixel_y));
-//                    if (pixel_x == pixels_per_module / 2 - 1 and pixel_y == pixels_per_module / 2 - 1)
-//                    {
-//                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x - 1, start_y + module_y * pixels_per_module + pixel_y - 1, Qt::red);
-//                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x - 1, start_y + module_y * pixels_per_module + pixel_y, Qt::red);
-//                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x - 1, start_y + module_y * pixels_per_module + pixel_y + 1, Qt::red);
-//                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x, start_y + module_y * pixels_per_module + pixel_y - 1, Qt::red);
-//                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x, start_y + module_y * pixels_per_module + pixel_y, Qt::red);
-//                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x, start_y + module_y * pixels_per_module + pixel_y + 1, Qt::red);
-//                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x + 1, start_y + module_y * pixels_per_module + pixel_y - 1, Qt::red);
-//                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x + 1, start_y + module_y * pixels_per_module + pixel_y, Qt::red);
-//                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x + 1, start_y + module_y * pixels_per_module + pixel_y + 1, Qt::red);
-//                    }
-                    if (pixel_x == 0 or pixel_x == pixels_per_module - 1 or pixel_y == 0 or pixel_y == pixels_per_module - 1)
+                    int element = qGray(qImage.pixel(start_x + module_x * pixels_per_module + i, start_y + module_y * pixels_per_module + top));
+                    if (pixels_checked > (pixels_per_module - 1) * 4 and ((sumMatrix[module_y][module_x] / pixels_checked) * 0.8 > element or (sumMatrix[module_y][module_x] / pixels_checked) * 1.2 < element))
                     {
-                        qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x, start_y + module_y * pixels_per_module + pixel_y, Qt::green);
+                        element = sumMatrix[module_y][module_x] / pixels_checked;
                     }
+                    sumMatrix[module_y][module_x] += element;
+                    qImage.setPixelColor(start_x + module_x * pixels_per_module + i, start_y + module_y * pixels_per_module + top, Qt::blue);
+                    pixels_checked++;
+                }
+                top++;
+                for (i = top; i <= bottom; ++i)
+                {
+                    int element = qGray(qImage.pixel(start_x + module_x * pixels_per_module + right, start_y + module_y * pixels_per_module + i));
+                    if (pixels_checked > (pixels_per_module - 1) * 4 and ((sumMatrix[module_y][module_x] / pixels_checked) * 0.8 > element or (sumMatrix[module_y][module_x] / pixels_checked) * 1.2 < element))
+                    {
+                        element = sumMatrix[module_y][module_x] / pixels_checked;
+                    }
+                    sumMatrix[module_y][module_x] += element;
+                    qImage.setPixelColor(start_x + module_x * pixels_per_module + right, start_y + module_y * pixels_per_module + i, Qt::blue);
+                    pixels_checked++;
+                }
+                right--;
+                if (top <= bottom)
+                {
+                    for (i = right; i >= left; --i)
+                    {
+                        int element = qGray(qImage.pixel(start_x + module_x * pixels_per_module + i, start_y + module_y * pixels_per_module + bottom));
+                        if (pixels_checked > (pixels_per_module - 1) * 4 and ((sumMatrix[module_y][module_x] / pixels_checked) * 0.8 > element or (sumMatrix[module_y][module_x] / pixels_checked) * 1.2 < element))
+                        {
+                            element = sumMatrix[module_y][module_x] / pixels_checked;
+                        }
+                        sumMatrix[module_y][module_x] += element;
+                        qImage.setPixelColor(start_x + module_x * pixels_per_module + i, start_y + module_y * pixels_per_module + bottom, Qt::blue);
+                        pixels_checked++;
+                    }
+                    bottom--;
+                }
+                if (left <= right) {
+                    for (i = bottom; i >= top; --i)
+                    {
+                        int element = qGray(qImage.pixel(start_x + module_x * pixels_per_module + left, start_y + module_y * pixels_per_module + i));
+                        if (pixels_checked > (pixels_per_module - 1) * 4 and ((sumMatrix[module_y][module_x] / pixels_checked) * 0.8 > element or (sumMatrix[module_y][module_x] / pixels_checked) * 1.2 < element))
+                        {
+                            element = sumMatrix[module_y][module_x] / pixels_checked;
+                        }
+                        sumMatrix[module_y][module_x] += element;
+                        qImage.setPixelColor(start_x + module_x * pixels_per_module + left, start_y + module_y * pixels_per_module + i, Qt::blue);
+                        pixels_checked++;
+                    }
+                    left++;
                 }
             }
+//            for (int pixel_y = border; pixel_y < pixels_per_module - border; pixel_y++)
+//            {
+//                for (int pixel_x = border; pixel_x < pixels_per_module - border; pixel_x++)
+//                {
+//                    sumMatrix[module_y][module_x] += qGray(qImage.pixel(start_x + module_x * pixels_per_module + pixel_x, start_y + module_y * pixels_per_module + pixel_y));
+////                    if (pixel_x == pixels_per_module / 2 - 1 and pixel_y == pixels_per_module / 2 - 1)
+////                    {
+////                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x - 1, start_y + module_y * pixels_per_module + pixel_y - 1, Qt::red);
+////                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x - 1, start_y + module_y * pixels_per_module + pixel_y, Qt::red);
+////                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x - 1, start_y + module_y * pixels_per_module + pixel_y + 1, Qt::red);
+////                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x, start_y + module_y * pixels_per_module + pixel_y - 1, Qt::red);
+////                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x, start_y + module_y * pixels_per_module + pixel_y, Qt::red);
+////                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x, start_y + module_y * pixels_per_module + pixel_y + 1, Qt::red);
+////                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x + 1, start_y + module_y * pixels_per_module + pixel_y - 1, Qt::red);
+////                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x + 1, start_y + module_y * pixels_per_module + pixel_y, Qt::red);
+////                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x + 1, start_y + module_y * pixels_per_module + pixel_y + 1, Qt::red);
+////                    }
+//                    qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x, start_y + module_y * pixels_per_module + pixel_y, Qt::blue);
+//                    if (pixel_x == 0 or pixel_x == pixels_per_module - 1 or pixel_y == 0 or pixel_y == pixels_per_module - 1)
+//                    {
+//                        qImage.setPixelColor(start_x + module_x * pixels_per_module + pixel_x, start_y + module_y * pixels_per_module + pixel_y, Qt::green);
+//                    }
+//                }
+//            }
         }
     }
     for (int window_y = 0; window_y < size - window_size + 1; window_y++)
     {
         for (int window_x = 0; window_x < size - window_size + 1; window_x++)
         {
-            int sum = 0;
+            float sum = 0;
             for (int module_y = 0; module_y < window_size; module_y++)
             {
                 for (int module_x = 0; module_x < window_size; module_x++)
@@ -240,7 +297,6 @@ QPixmap Decoder::qrToMatrix(QPixmap image, QPoint* blocks, int size)
                 }
             }
             int filter = sum / area;
-            cout << filter << endl;
             for (int module_y = 0; module_y < window_size; module_y++)
             {
                 for (int module_x = 0; module_x < window_size; module_x++)
