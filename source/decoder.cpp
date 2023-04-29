@@ -16,7 +16,7 @@ using namespace std;
 //  # #
 //  #
 //  C
-//  [A, B, C] [AB, BC, CA]
+//  lengths: [AB, BC, CA]
 
 Decoder::Decoder()
 {
@@ -37,9 +37,9 @@ QPixmap Decoder::mainSequence(const QPixmap* image, QPoint* blocks, int size)
     blocks[0] = rotatePoint(blocks[0], image, newImage, angle);
     blocks[1] = rotatePoint(blocks[1], image, newImage, angle);
     blocks[2] = rotatePoint(blocks[2], image, newImage, angle);
-    cout << blocks[0].x() << " " << blocks[0].y() << " " << blocks[1].x() << " " << blocks[1].y() << " " << blocks[2].x() << " " << blocks[2].y() << "   " << angle << endl;
+    cout << blocks[0].x() << " " << blocks[0].y() << " " << blocks[1].x() << " " << blocks[1].y() << " " << blocks[2].x() << " " << blocks[2].y() << "   " << angle * 180 / M_PI << endl;
     newImage = qrToMatrix(newImage, blocks, size);
-    cout << blocks[0].x() << " " << blocks[0].y() << " " << blocks[1].x() << " " << blocks[1].y() << " " << blocks[2].x() << " " << blocks[2].y() << "   " << angle << endl;
+    cout << blocks[0].x() << " " << blocks[0].y() << " " << blocks[1].x() << " " << blocks[1].y() << " " << blocks[2].x() << " " << blocks[2].y() << "   " << angle * 180 / M_PI << endl;
     return newImage;
 }
 
@@ -82,7 +82,7 @@ int Decoder::defineQRQuadrant(QPoint* blocks)
     {
         return 1;
     }
-    else if (cx <= 0 and cy <= 0 and ax >= 0 and ay <= 0)
+    if (cx <= 0 and cy <= 0 and ax >= 0 and ay <= 0)
     {
         QPoint buff = blocks[2];
         blocks[2] = blocks[0];
@@ -90,11 +90,11 @@ int Decoder::defineQRQuadrant(QPoint* blocks)
 
         return 1;
     }
-    else if (ax >= 0 and ay <= 0 and cx >= 0 and cy >= 0) // rot to quadrant 4
+    if (ax >= 0 and ay <= 0 and cx >= 0 and cy >= 0) // rot to quadrant 4
     {
         return 0;
     }
-    else if (cx >= 0 and cy <= 0 and ax >= 0 and ay >= 0)
+    if (cx >= 0 and cy <= 0 and ax >= 0 and ay >= 0)
     {
         QPoint buff = blocks[2];
         blocks[2] = blocks[0];
@@ -102,11 +102,11 @@ int Decoder::defineQRQuadrant(QPoint* blocks)
 
         return 0;
     }
-    else if (ax >= 0 and ay >= 0 and cx <= 0 and cy >= 0) // rot to quadrant 3
+    if (ax >= 0 and ay >= 0 and cx <= 0 and cy >= 0) // rot to quadrant 3
     {
         return 3;
     }
-    else if (cx >= 0 and cy >= 0 and ax <= 0 and ay >= 0)
+    if (cx >= 0 and cy >= 0 and ax <= 0 and ay >= 0)
     {
         QPoint buff = blocks[2];
         blocks[2] = blocks[0];
@@ -114,11 +114,11 @@ int Decoder::defineQRQuadrant(QPoint* blocks)
 
         return 3;
     }
-    else if (ax <= 0 and ay >= 0 and cx <= 0 and cy <= 0) // rot to quadrant 2
+    if (ax <= 0 and ay >= 0 and cx <= 0 and cy <= 0) // rot to quadrant 2
     {
         return 2;
     }
-    else if (cx <= 0 and cy >= 0 and ax <= 0 and ay <= 0)
+    if (cx <= 0 and cy >= 0 and ax <= 0 and ay <= 0)
     {
         QPoint buff = blocks[2];
         blocks[2] = blocks[0];
@@ -136,13 +136,21 @@ float Decoder::defineRotationAngle(QPoint* blocks, int quadrant)
 {
     float anglea = atan2((blocks[0].y() - blocks[1].y()), (blocks[0].x() - blocks[1].x())) * -1;
     float anglec = atan2((blocks[2].y() - blocks[1].y()), (blocks[2].x() - blocks[1].x())) * -1;
-    cout << anglea << " " << anglec << " " << quadrant << endl;
+    cout << anglea * 180 / M_PI << " " << anglec * 180 / M_PI << " " << quadrant << endl;
+    if (anglea < 0)
+    {
+        anglea += M_PI / 2;
+    }
+    if (anglec < 0)
+    {
+        anglec += M_PI / 2;
+    }
+    cout << anglea * 180 / M_PI << " " << anglec * 180 / M_PI << " " << quadrant << endl;
     return anglec + quadrant * (M_PI / 2);
 }
 
 QPoint Decoder::rotatePoint(QPoint point, const QPixmap* image, QPixmap newImage, float angle)
 {
-    angle *= -1;
     int x = point.x() - image->width() / 2;
     int y = point.y() - image->height() / 2;
     int rx, ry;
@@ -172,7 +180,7 @@ QPixmap Decoder::qrToMatrix(QPixmap image, QPoint* blocks, int size)
     {
         pixels_per_module++;
     }
-    int border = pixels_per_module * 0.25;
+    int border = pixels_per_module * 0.4;
 
     float image_scale_factor = float(pixels_per_module) / (float(size_pixels) / float(size - 1));
     QImage qImage = image.scaled(int(image.width() * image_scale_factor), int(image.height() * image_scale_factor)).toImage();
@@ -327,16 +335,6 @@ QPixmap Decoder::qrToMatrix(QPixmap image, QPoint* blocks, int size)
             }
         }
     }
-
-//    for (int y = 0; y < size; y++)
-//    {
-//        for (int x = 0; x < size; x++)
-//        {
-//            cout << sumMatrix[y][x] << ",";
-//        }
-//        cout << endl;
-//    }
-//    cout << endl;
     for (int y = 0; y < size; y++)
     {
         for (int x = 0; x < size; x++)
@@ -349,7 +347,7 @@ QPixmap Decoder::qrToMatrix(QPixmap image, QPoint* blocks, int size)
     {
         for (int x = 0; x < size; x++)
         {
-            if (modMatrix[y][x] == true)
+            if (modMatrix[y][x])
             {
                 cout << "██";
             }
