@@ -1,6 +1,9 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "decoder.h"
+#include "decoderpopup.h"
+
 #include <QMainWindow>
 #include <QImage>
 
@@ -45,5 +48,7 @@ private:
     bool is_selecting_qr = 0;
     QPoint blocks[3];
     int click_number = 0;
+    Settings settings;
+    bool has_ever_decoded = false;
 };
 #endif

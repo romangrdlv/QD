@@ -1,6 +1,5 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
-#include "decoder.h"
 
 #include <iostream>
 #include <QApplication>
@@ -12,6 +11,7 @@
 #include <QImageReader>
 #include <QImageWriter>
 #include <QLabel>
+#include <QLayout>
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMimeData>
@@ -38,7 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->scrollArea->setBackgroundRole(QPalette::Dark);
     ui->scrollArea->setWidget(ui->image);
     ui->scrollArea->setVisible(false);
-    setCentralWidget(ui->scrollArea);
+    setCentralWidget(ui->horizontalLayoutWidget);
     resize(QGuiApplication::primaryScreen()->availableSize() * (3 / 5));
 }
 
@@ -59,8 +59,8 @@ bool MainWindow::loadFile(const QString &fileName)
     }
     setImage(newImage);
     setWindowFilePath(fileName);
-    const QString message = tr("Opened \"%1\", %2x%3").arg(QDir::toNativeSeparators(fileName)).arg(qImage.width()).arg(qImage.height());
-    statusBar()->showMessage(message);
+    statusBar()->showMessage(tr("Opened \"%1\", %2x%3").arg(QDir::toNativeSeparators(fileName)).arg(qImage.width()).arg(qImage.height()));
+    ui->log->append(tr("Opened \"%1\", %2x%3\n").arg(QDir::toNativeSeparators(fileName)).arg(qImage.width()).arg(qImage.height()));
     return true;
 }
 
@@ -155,6 +155,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
         {
             click_number++;
             statusBar()->showMessage(tr("Point %1 set [%2, %3]").arg(click_number).arg(blocks[click_number - 1].x()).arg(blocks[click_number - 1].y()));
+            ui->log->append(tr("Point %1 set [%2, %3]\n").arg(click_number).arg(blocks[click_number - 1].x()).arg(blocks[click_number - 1].y()));
         }
         if (click_number == 3)
         {
@@ -162,6 +163,7 @@ void MainWindow::mousePressEvent(QMouseEvent *event)
             is_selecting_qr = false;
             ui->action_Decode->setEnabled(true);
             statusBar()->showMessage(tr("Point 3 set [%1, %2]. Ready for decryption").arg(blocks[2].x()).arg(blocks[2].y()));
+            ui->log->append(tr("Ready for decryption\n"));
         }
     }
 }
@@ -217,8 +219,8 @@ void MainWindow::on_action_Paste_triggered()
     {
         setImage(newImage);
         setWindowFilePath(QString());
-        const QString message = tr("Obtained image from clipboard, %1x%2, Depth: %3").arg(newImage.width()).arg(newImage.height()).arg(newImage.depth());
-        statusBar()->showMessage(message);
+        statusBar()->showMessage(tr("Obtained image from clipboard, %1x%2, Depth: %3").arg(newImage.width()).arg(newImage.height()).arg(newImage.depth()));
+        ui->log->append(tr("Obtained image from clipboard, %1x%2, Depth: %3\n").arg(newImage.width()).arg(newImage.height()).arg(newImage.depth()));
     }
 #endif
 }
@@ -258,8 +260,21 @@ void MainWindow::on_action_Select_QR_Area_triggered()
 
 void MainWindow::on_action_Decode_triggered()
 {
-    Decoder decoder;
-    QPixmap image = decoder.mainSequence(ui->image->pixmap(), blocks, 61);
-    setImage(image.toImage());
+    DecoderPopup popup;
+    if (has_ever_decoded)
+    {
+        popup.applySettings(settings);
+    }
+    popup.show();
+    popup.exec();
+    settings = popup.getSettings();
+    has_ever_decoded = true;
+    Decoder *decoder = new Decoder;
+    Result result = decoder->mainSequence(ui->image->pixmap(), blocks, settings);
+    ui->log->append(result.log);
+    ui->log->append(QString("--------------- Decoded text: ---------------\n"));
+    ui->log->append(result.text);
+    ui->log->append(QString("\n"));
+    setImage(result.image);
 }
 
