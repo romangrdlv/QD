@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 3.5)
-
 project(qdd VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -18,6 +16,9 @@ set(PROJECT_SOURCES
         source/main.cpp
         source/decoder.cpp
         source/decoder.h
+        source/decoderpopup.cpp
+        source/decoderpopup.h
+        source/decoderpopup.ui
         source/mainwindow.cpp
         source/mainwindow.h
         source/mainwindow.ui
