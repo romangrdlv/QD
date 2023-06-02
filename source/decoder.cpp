@@ -1,5 +1,5 @@
 #include "decoder.h"
-#include "quirc.h"
+#include <quirc.h>
 #include <QApplication>
 #include <math.h>
 #include <iostream>
